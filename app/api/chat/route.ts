@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SYSTEM_PROMPT, buildUserMessage, parseAnalysisResponse } from "@/lib/prompts";
 
+
 export async function POST(req: NextRequest) {
   try {
     const { message } = await req.json();

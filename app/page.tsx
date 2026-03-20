@@ -55,7 +55,7 @@ export default function Home() {
     setSelectedNodeId(null);
 
     try {
-      const res = await fetch("/api/analyze", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message }),
@@ -78,7 +78,7 @@ export default function Home() {
         // Accumulate concepts (dedup by title)
         setAllConcepts((prev) => {
           const existing = new Set(prev.map((c) => c.title));
-          const newConcepts = analysis.concepts.filter((c) => !existing.has(c.title));
+          const newConcepts = (analysis.concepts ?? []).filter((c) => !existing.has(c.title));
           return [...prev, ...newConcepts];
         });
 
@@ -90,6 +90,14 @@ export default function Home() {
           timestamp: Date.now(),
         };
         setMessages((prev) => [...prev, assistantMsg]);
+      } else {
+        const errMsg: ChatMessage = {
+          id: `msg_${Date.now()}`,
+          role: "assistant",
+          content: "Error: Could not parse the response. Please try again.",
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => [...prev, errMsg]);
       }
     } catch (err) {
       console.error("Fetch error:", err);
@@ -264,6 +272,13 @@ export default function Home() {
                       <div className="w-2.5 h-2.5 rounded-full bg-[#E5A832] loading-node" style={{ animationDelay: "0.6s" }} />
                     </div>
                     <span className="text-xs text-[#666] font-mono">Mapping code structure...</span>
+                  </div>
+                )}
+
+                {/* Error messages */}
+                {!isLoading && messages.length > 0 && messages[messages.length - 1].role === "assistant" && (
+                  <div className="mt-4 px-4 py-3 rounded-lg border border-[#E05252]/30 bg-[#E05252]/10 text-xs text-[#E05252] font-mono text-center">
+                    {messages[messages.length - 1].content}
                   </div>
                 )}
               </div>
