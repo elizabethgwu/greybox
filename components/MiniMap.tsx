@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import * as d3 from "d3";
 import { CodeNode, CodeEdge, NODE_CONFIG } from "@/lib/types";
 
@@ -9,12 +9,48 @@ interface MiniMapProps {
   edges: CodeEdge[];
   selectedNodeId: string | null;
   onNodeSelect: (nodeId: string) => void;
+  colorblindMode?: boolean;
 }
 
-export default function MiniMap({ nodes, edges, selectedNodeId, onNodeSelect }: MiniMapProps) {
+export default function MiniMap({ nodes, edges, selectedNodeId, onNodeSelect, colorblindMode = false }: MiniMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const W = 200;
   const H = 160;
+
+  // Drag state — default to bottom-left so it doesn't clash with NodeInspector on the right
+  const [pos, setPos] = useState({ bottom: 16, left: 16 });
+  const isDragging = useRef(false);
+  const dragStart = useRef({ mouseX: 0, mouseY: 0, bottom: 16, left: 16 });
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    dragStart.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      bottom: pos.bottom,
+      left: pos.left,
+    };
+  }, [pos]);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      const dx = e.clientX - dragStart.current.mouseX;
+      const dy = e.clientY - dragStart.current.mouseY;
+      setPos({
+        left: Math.max(0, dragStart.current.left + dx),
+        bottom: Math.max(0, dragStart.current.bottom - dy),
+      });
+    };
+    const onMouseUp = () => { isDragging.current = false; };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
 
   useEffect(() => {
     if (!svgRef.current || nodes.length === 0) return;
@@ -86,24 +122,32 @@ export default function MiniMap({ nodes, edges, selectedNodeId, onNodeSelect }: 
       const isSelected = id === selectedNodeId;
       const r = isSelected ? 8 : 6;
 
+      const colorVar = `var(--accent-${node.type})`;
       svg.append("circle")
         .attr("cx", pos.x)
         .attr("cy", pos.y)
         .attr("r", r)
-        .attr("fill", isSelected ? config.color : `${config.color}66`)
-        .attr("stroke", isSelected ? "#fff" : config.color)
         .attr("stroke-width", isSelected ? 2 : 1)
         .attr("cursor", "pointer")
+        .style("fill", isSelected ? colorVar : `color-mix(in srgb, ${colorVar} 40%, transparent)`)
+        .style("stroke", isSelected ? "#fff" : colorVar)
         .on("click", () => onNodeSelect(id));
     });
-  }, [nodes, edges, selectedNodeId, onNodeSelect]);
+  }, [nodes, edges, selectedNodeId, onNodeSelect, colorblindMode]);
 
   if (nodes.length === 0) return null;
 
   return (
-    <div className="absolute bottom-4 right-4 rounded-lg overflow-hidden border border-[#333] bg-[#111]/90 backdrop-blur-sm">
-      <div className="px-3 py-1.5 border-b border-[#333] flex items-center gap-2">
+    <div
+      className="absolute rounded-lg overflow-hidden border border-[#333] bg-[#111]/90 backdrop-blur-sm select-none"
+      style={{ bottom: pos.bottom, left: pos.left }}
+    >
+      <div
+        className="px-3 py-1.5 border-b border-[#333] flex items-center gap-2 cursor-grab active:cursor-grabbing"
+        onMouseDown={handleMouseDown}
+      >
         <span className="text-[10px] font-mono tracking-wider text-[#888] uppercase">Minimap</span>
+        <span className="text-[#888] text-[10px] ml-auto">⠿</span>
       </div>
       <svg ref={svgRef} width={W} height={H} />
     </div>

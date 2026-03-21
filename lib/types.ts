@@ -1,4 +1,4 @@
-// Types for CodeMap's node-based code visualization
+// Types for Greybox's node-based code visualization
 
 export type NodeType = "scope" | "process" | "output" | "decision";
 
@@ -45,6 +45,16 @@ export interface CodeEdge {
   label?: string;
 }
 
+export interface CritiqueCard {
+  id: string;
+  title: string;
+  summary: string;       // one-line description of the alternative approach
+  explanation: string;   // plain-language explanation of how this approach differs
+  tradeoff: string;      // what you gain and what you give up
+  complexity: "simpler" | "similar" | "more complex";
+  codeExample?: string;  // short code snippet showing the alternative in action
+}
+
 export interface AnalysisResult {
   code: string;
   language: string;
@@ -52,6 +62,7 @@ export interface AnalysisResult {
   nodes: CodeNode[];
   edges: CodeEdge[];
   concepts: ConceptCard[];
+  critiques: CritiqueCard[];
 }
 
 export interface ConceptCard {
@@ -60,6 +71,9 @@ export interface ConceptCard {
   principle: string;
   relevance: string;
   difficulty: "beginner" | "intermediate" | "advanced";
+  nodeId?: string;      // which node in the analysis best demonstrates this concept
+  codeSnippet?: string; // extracted at accumulation time from that node's codeRange
+  language?: string;    // programming language of the snippet
 }
 
 export interface ChatMessage {
@@ -89,7 +103,7 @@ export const NODE_CONFIG: Record<
   process: {
     color: "#4A90D9",
     shape: "rectangle",
-    icon: "⚙",
+    icon: "■",
     label: "PROCESS",
   },
   output: {

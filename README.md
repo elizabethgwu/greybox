@@ -1,10 +1,10 @@
-# CodeMap — Visual Code Reasoning
+# Greybox — Visual Code Reasoning
 
 **A prototype that allows you to see what your code is doing and how AI works with it so you can learn better.**
 
-Instead of just showing you the answer, CodeMap breaks code into visual node maps that reveal the *structure of reasoning* — scope, processing, output, and decision points — so you build understanding, not just solutions.
+Instead of just showing you the answer, Greybox breaks code into visual node maps that reveal the *structure of reasoning* — scope, processing, output, and decision points. 
 
-![CodeMap Prototype](./docs/screenshot.png)
+![Greybox Prototype](./docs/screenshot.png)
 
 ## The Problem
 
@@ -14,11 +14,11 @@ When developers ask AI for code help, they get working code but miss the reasoni
 - How does data flow through the logic?
 - Which blocks of code serve which purpose?
 
-This opacity undermines learning. Research on **cognitive load theory** (Sweller) shows that when reasoning is invisible, learners can't build transferable mental models. **Dual coding theory** (Paivio) demonstrates that combining visual and verbal representations produces deeper understanding.
+Missing the reasoning means that you don't understand what is going on in the ML blackbox.
 
 ## The Solution
 
-CodeMap provides **two synchronized views** of every code analysis:
+Greybox provides **two synchronized views** of every code analysis:
 
 ### Node Map (D3.js)
 A visual graph showing the code's logical structure:
@@ -27,7 +27,7 @@ A visual graph showing the code's logical structure:
 - **◉ Output** (green rounded rects) — return values, final results
 - **⟐ Decision** (yellow diamonds) — conditionals, branching, error handling
 
-Nodes are distinguishable by **shape and icon**, not just color (accessibility-first).
+Nodes are distinguishable by **shape and icon**, not just color (accessibility-first). This is based off of https://platform.claude.com/docs/en/build-with-claude/structured-outputs.
 
 ### Code Panel with Decision Overlay
 The actual code with:
@@ -42,14 +42,17 @@ Click any node to see:
 - For decision nodes: what was chosen, why, and what alternatives existed
 
 ### Concepts Sidebar
-Accumulates programming principles encountered across analyses, creating a growing knowledge base.
+The Concepts Sidebar allows you to look into specific topics or use cases that you are encountering within your code. It provides a brief explanationo and an example from your own code so that you can see it illustrated.
+
+### Variables Sidebar
+The Variables Sidebar allows you to look at all of the variables within your code, sectioned by node. You can change the variable name as well as the contents and see it reflected within your code. This way, when you need to triage your code for bugs, you can see all your variables.
 
 ### Minimap
 Navigation overview of the full node structure.
 
 ## Learning Science Foundation
 
-| Principle | How CodeMap Uses It |
+| Principle | How Greybox Uses It |
 |-----------|-------------------|
 | **Dual Coding** (Paivio) | Visual node map + textual code = two memory traces |
 | **Cognitive Load** (Sweller) | Minimap offloads "where am I?" from working memory |
@@ -140,8 +143,7 @@ The architecture is domain-agnostic:
 Future extensions:
 - **Guide Me mode**: Node map builds progressively as user answers questions
 - **Challenge mode**: Partially empty maps for the user to fill in
-- **Spaced repetition**: Resurface concepts from past sessions
-- **Collaborative**: Share node maps for code review
+- **Collaborative**: Share node maps for code review either viewing the same canvas or exporting via Mermaid
 
 ## Tech Stack
 
