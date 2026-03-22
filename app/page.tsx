@@ -7,7 +7,6 @@ import ChatInput from "@/components/ChatInput";
 import CodePanel from "@/components/CodePanel";
 import NodeInspector from "@/components/NodeInspector";
 import ConceptsSidebar from "@/components/ConceptsSidebar";
-import VariablesPanel from "@/components/VariablesPanel";
 import CritiquePanel from "@/components/CritiquePanel";
 import CatLoader from "@/components/CatLoader";
 
@@ -24,8 +23,6 @@ export default function Home() {
   const [allConcepts, setAllConcepts] = useState<ConceptCard[]>([]);
   const [conceptsOpen, setConceptsOpen] = useState(false);
   const [conceptsWidth, setConceptsWidth] = useState(288);
-  const [variablesOpen, setVariablesOpen] = useState(false);
-  const [variablesWidth, setVariablesWidth] = useState(272);
   const [critiqueOpen, setCritiqueOpen] = useState(false);
   const [critiqueWidth, setCritiqueWidth] = useState(288);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -40,9 +37,8 @@ export default function Home() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const isPanelDragging = useRef(false);
   const isConceptsDragging = useRef(false);
-  const isVariablesDragging = useRef(false);
   const isCritiqueDragging = useRef(false);
-  const [panelOrder, setPanelOrder] = useState<Array<'variables' | 'concepts' | 'critique'>>(['variables', 'concepts', 'critique']);
+  const [panelOrder, setPanelOrder] = useState<Array<'concepts' | 'critique'>>(['concepts', 'critique']);
   const panelDragIdRef = useRef<string | null>(null);
   const submittedCodeRef = useRef<string | null>(null);
   useEffect(() => { submittedCodeRef.current = submittedCode; }, [submittedCode]);
@@ -231,22 +227,6 @@ export default function Home() {
     window.addEventListener("mouseup", onMouseUp);
   }, []);
 
-  const handleVariablesDragStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isVariablesDragging.current = true;
-    const onMouseMove = (ev: MouseEvent) => {
-      if (!isVariablesDragging.current) return;
-      setVariablesWidth(Math.max(220, Math.min(window.innerWidth - ev.clientX, window.innerWidth - 400)));
-    };
-    const onMouseUp = () => {
-      isVariablesDragging.current = false;
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  }, []);
-
   const handleCritiqueDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     isCritiqueDragging.current = true;
@@ -270,12 +250,12 @@ export default function Home() {
   const handlePanelReorderDragOver = useCallback((id: string) => {
     if (!panelDragIdRef.current || panelDragIdRef.current === id) return;
     setPanelOrder((prev) => {
-      const from = prev.indexOf(panelDragIdRef.current as 'variables' | 'concepts' | 'critique');
-      const to = prev.indexOf(id as 'variables' | 'concepts' | 'critique');
+      const from = prev.indexOf(panelDragIdRef.current as 'concepts' | 'critique');
+      const to = prev.indexOf(id as 'concepts' | 'critique');
       if (from === -1 || to === -1) return prev;
       const next = [...prev];
       next.splice(from, 1);
-      next.splice(to, 0, panelDragIdRef.current as 'variables' | 'concepts' | 'critique');
+      next.splice(to, 0, panelDragIdRef.current as 'concepts' | 'critique');
       return next;
     });
   }, []);
@@ -292,66 +272,6 @@ export default function Home() {
     setErrorMessage(null);
   }, []);
 
-  // Update a variable name and/or value, reflecting changes in the code
-  const handleVariableChange = useCallback((
-    nodeId: string,
-    varIndex: number,
-    changes: { name?: string; value?: string }
-  ) => {
-    setCurrentAnalysis((prev) => {
-      if (!prev) return prev;
-      const nodeIdx = prev.nodes.findIndex((n) => n.id === nodeId);
-      if (nodeIdx === -1) return prev;
-
-      const node = prev.nodes[nodeIdx];
-      const variable = node.variables[varIndex];
-      let newCode = submittedCodeRef.current ?? "";
-      const lines = newCode.split("\n");
-      const start = node.codeRange.startLine - 1;
-      const end = Math.min(node.codeRange.endLine, lines.length);
-
-      // Replace old name with new name across the node's code range
-      if (changes.name !== undefined && changes.name !== variable.name) {
-        const oldName = variable.name;
-        for (let i = start; i < end; i++) {
-          if (lines[i].includes(oldName)) {
-            lines[i] = lines[i].replaceAll(oldName, changes.name);
-          }
-        }
-      }
-
-      // Replace old value with new value (first occurrence)
-      if (changes.value !== undefined && changes.value !== (variable.value ?? "")) {
-        const oldValue = variable.value ?? "";
-        if (oldValue) {
-          for (let i = start; i < end; i++) {
-            if (lines[i].includes(oldValue)) {
-              lines[i] = lines[i].replace(oldValue, changes.value);
-              break;
-            }
-          }
-        }
-      }
-
-      newCode = lines.join("\n");
-
-      const updatedNodes = prev.nodes.map((n, i) => {
-        if (i !== nodeIdx) return n;
-        const updatedVars = n.variables.map((v, vi) => {
-          if (vi !== varIndex) return v;
-          return {
-            ...v,
-            ...(changes.name !== undefined ? { name: changes.name } : {}),
-            ...(changes.value !== undefined ? { value: changes.value } : {}),
-          };
-        });
-        return { ...n, variables: updatedVars };
-      });
-
-      setSubmittedCode(newCode);
-      return { ...prev, nodes: updatedNodes };
-    });
-  }, []);
 
   // First sentence of the explanation for collapsed view
   const shortExplanation = currentAnalysis?.explanation
@@ -637,24 +557,6 @@ export default function Home() {
 
         {/* Orderable sidebars */}
         {panelOrder.map((panelId) => {
-          if (panelId === 'variables') return (
-            <VariablesPanel
-              key="variables"
-              panelId="variables"
-              analysis={currentAnalysis}
-              selectedNodeId={selectedNodeId}
-              onNodeSelect={handleNodeSelect}
-              onVariableChange={handleVariableChange}
-              onShowInCode={(nodeId) => { setSelectedNodeId(nodeId); }}
-              isOpen={variablesOpen}
-              onToggle={() => setVariablesOpen((v) => !v)}
-              width={variablesWidth}
-              onDragStart={handleVariablesDragStart}
-              onPanelDragStart={handlePanelReorderDragStart}
-              onPanelDragOver={handlePanelReorderDragOver}
-              onPanelDrop={handlePanelReorderDrop}
-            />
-          );
           if (panelId === 'concepts') return (
             <ConceptsSidebar
               key="concepts"

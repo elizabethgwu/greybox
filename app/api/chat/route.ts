@@ -112,14 +112,14 @@ const ENRICH_ANALYSIS_TOOL: Anthropic.Tool = {
         maxItems: 3,
         items: {
           type: "object",
-          required: ["id", "title", "principle", "relevance", "difficulty"],
+          required: ["id", "title", "principle", "relevance", "difficulty", "nodeId"],
           properties: {
             id: { type: "string" },
             title: { type: "string" },
             principle: { type: "string" },
             relevance: { type: "string" },
             difficulty: { type: "string", enum: ["beginner", "intermediate", "advanced"] },
-            nodeId: { type: "string" },
+            nodeId: { type: "string", description: "ID of the node in the analysis that best demonstrates this concept" },
           },
         },
       },

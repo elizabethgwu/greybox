@@ -226,8 +226,8 @@ export default function NodeMap({
 
     // Light/dark palette for D3 inline colors
     const d3Colors = lightMode
-      ? { pillBg: "#e6e0d7", pillStroke: "#ddd7cc", edgeDefault: "#c4bdb2", edgeActive: "#5a5045", labelText: "#60564b", labelActive: "#3a3228", arrow: "#c4bdb2", arrowHi: "#5a5045" }
-      : { pillBg: "#141414", pillStroke: "#2a2a2a", edgeDefault: "#333", edgeActive: "#888", labelText: "#555", labelActive: "#999", arrow: "#444", arrowHi: "#999" };
+      ? { pageBg: "#f0ebe3", pillBg: "#e6e0d7", pillStroke: "#ddd7cc", edgeDefault: "#c4bdb2", edgeActive: "#5a5045", labelText: "#60564b", labelActive: "#3a3228", arrow: "#c4bdb2", arrowHi: "#5a5045" }
+      : { pageBg: "#0a0a0a", pillBg: "#141414", pillStroke: "#2a2a2a", edgeDefault: "#333", edgeActive: "#888", labelText: "#555", labelActive: "#999", arrow: "#444", arrowHi: "#999" };
 
     const defs = svg.append("defs");
     // Default arrowhead
@@ -325,8 +325,10 @@ export default function NodeMap({
     // Render unconnected edges first so selected/connected edges appear on top
     const sortedRoutes = [...routes].sort((a, b) => +a.isConnected - +b.isConnected);
 
+    const edgesG = g.append("g");
+
     sortedRoutes.forEach(({ edge, source, target, sourceBottom, targetTop, labelX, labelY, isConnected, isDimmed }) => {
-      const edgeG = g.append("g");
+      const edgeG = edgesG.append("g");
 
       edgeG.append("path")
         .attr("d", `M ${source.x} ${sourceBottom} L ${target.x} ${targetTop}`)
@@ -376,14 +378,48 @@ export default function NodeMap({
           onNodeSelect(isSelected ? null : node.id);
         });
 
-      // Opaque background rect covers the full visual extent of the node (shape + pills)
-      // so edge lines passing through this area are hidden behind it.
+      // Background shape (slightly larger than node, page bg color) blocks edges
+      // passing through. Colocated in nodeG so it moves with zoom/pan correctly.
+      const pad = 6;
+      const bg = d3Colors.pageBg;
+      const shape = NODE_CONFIG[node.type].shape;
+      switch (shape) {
+        case "hexagon": {
+          const r = NODE_SIZE + pad;
+          const pts = Array.from({ length: 6 }, (_, i) => {
+            const a = (Math.PI / 3) * i - Math.PI / 6;
+            return `${r * Math.cos(a)},${r * Math.sin(a)}`;
+          }).join(" ");
+          nodeG.append("polygon").attr("points", pts).attr("fill", bg).attr("stroke", "none").attr("pointer-events", "none");
+          break;
+        }
+        case "rectangle":
+          nodeG.append("rect")
+            .attr("x", -(NODE_SIZE + pad)).attr("y", -(NODE_SIZE * 0.7 + pad))
+            .attr("width", (NODE_SIZE + pad) * 2).attr("height", (NODE_SIZE * 0.7 + pad) * 2).attr("rx", 4)
+            .attr("fill", bg).attr("stroke", "none").attr("pointer-events", "none");
+          break;
+        case "diamond": {
+          const s = NODE_SIZE + pad;
+          nodeG.append("polygon")
+            .attr("points", `0,${-s} ${s},0 0,${s} ${-s},0`)
+            .attr("fill", bg).attr("stroke", "none").attr("pointer-events", "none");
+          break;
+        }
+        case "rounded-rect": {
+          const s = NODE_SIZE + pad;
+          nodeG.append("rect")
+            .attr("x", -s).attr("y", -(NODE_SIZE * 0.7 + pad))
+            .attr("width", s * 2).attr("height", (NODE_SIZE * 0.7 + pad) * 2).attr("rx", s * 0.35)
+            .attr("fill", bg).attr("stroke", "none").attr("pointer-events", "none");
+          break;
+        }
+      }
+      // Background rect covering the label area (type badge + name pill) below the shape
       nodeG.append("rect")
-        .attr("x", -112).attr("y", -NODE_SIZE - 2)
-        .attr("width", 224).attr("height", NODE_SIZE * 2 + 52)
-        .attr("fill", d3Colors.pillBg)
-        .attr("stroke", "none")
-        .attr("pointer-events", "none");
+        .attr("x", -112).attr("y", NODE_SIZE + 4)
+        .attr("width", 224).attr("height", 48)
+        .attr("fill", bg).attr("stroke", "none").attr("pointer-events", "none");
 
       drawNodeShape(nodeG, node.type, NODE_SIZE, isSelected, d3Colors.pillBg, d3Colors.pillStroke);
 
