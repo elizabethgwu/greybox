@@ -4,7 +4,8 @@
 
 Instead of just showing you the answer, Greybox breaks code into visual node maps that reveal the *structure of reasoning* — scope, processing, output, and decision points. 
 
-![Greybox Prototype](./docs/screenshot.png)
+<img width="2032" height="1167" alt="Screenshot 2026-03-22 at 6 12 26 PM" src="https://github.com/user-attachments/assets/6926a240-8180-4ba1-98eb-69b84e3e224c" />
+
 
 ## The Problem
 
