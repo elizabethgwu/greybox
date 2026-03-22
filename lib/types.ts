@@ -57,7 +57,6 @@ export interface CritiqueCard {
 }
 
 export interface AnalysisResult {
-  code: string;
   language: string;
   explanation: string;
   nodes: CodeNode[];

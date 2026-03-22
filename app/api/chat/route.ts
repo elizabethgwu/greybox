@@ -1,16 +1,17 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { SYSTEM_PROMPT, buildUserMessage } from "@/lib/prompts";
+import { ANALYZE_SYSTEM_PROMPT, ENRICH_SYSTEM_PROMPT, buildUserMessage, buildEnrichMessage } from "@/lib/prompts";
 import { AnalysisResult } from "@/lib/types";
 
 export const maxDuration = 300;
 
+// First call: nodes + edges only (no concepts/critiques, trimmed assumptions)
 const ANALYZE_CODE_TOOL: Anthropic.Tool = {
   name: "analyze_code",
-  description: "Decompose code into a structured visual graph with nodes, edges, and concept cards.",
+  description: "Decompose code into a structured visual graph with nodes and edges.",
   input_schema: {
     type: "object" as const,
-    required: ["language", "explanation", "nodes", "edges", "concepts", "critiques"],
+    required: ["language", "explanation", "nodes", "edges"],
     properties: {
       code: { type: "string", description: "Only include if you generated or modified the code. Omit if analyzing user-submitted code as-is." },
       language: { type: "string" },
@@ -48,20 +49,19 @@ const ANALYZE_CODE_TOOL: Anthropic.Tool = {
             },
             assumptions: {
               type: "array",
+              maxItems: 1,
               items: {
                 type: "object",
                 required: ["text", "confidence"],
                 properties: {
                   text: { type: "string" },
                   confidence: { type: "string", enum: ["high", "medium", "low"] },
-                  reason: { type: "string" },
-                  alternative: { type: "string" },
                 },
               },
             },
             decision: {
               type: "object",
-              required: ["chose", "because", "alternatives"],
+              required: ["chose", "because"],
               properties: {
                 chose: { type: "string" },
                 because: { type: "string" },
@@ -94,9 +94,21 @@ const ANALYZE_CODE_TOOL: Anthropic.Tool = {
           },
         },
       },
+    },
+  },
+};
+
+// Second call: concepts + critiques only
+const ENRICH_ANALYSIS_TOOL: Anthropic.Tool = {
+  name: "enrich_analysis",
+  description: "Add concept cards and structural critique alternatives to a completed code analysis.",
+  input_schema: {
+    type: "object" as const,
+    required: ["concepts", "critiques"],
+    properties: {
       concepts: {
         type: "array",
-        description: "Generate 1 to 3 concept cards. Maximum 3.",
+        description: "1 to 3 concept cards. Maximum 3.",
         maxItems: 3,
         items: {
           type: "object",
@@ -113,7 +125,7 @@ const ANALYZE_CODE_TOOL: Anthropic.Tool = {
       },
       critiques: {
         type: "array",
-        description: "Generate exactly 2 alternatives. No more.",
+        description: "1 to 2 alternative structural approaches.",
         maxItems: 2,
         items: {
           type: "object",
@@ -153,32 +165,67 @@ export async function POST(req: NextRequest) {
       const heartbeat = setInterval(() => send(": heartbeat\n\n"), 15000);
 
       try {
-        const stream = client.messages.stream({
+        // ── Call 1: core analysis (nodes + edges) ──────────────────────────
+        const stream1 = client.messages.stream({
           model: "claude-sonnet-4-6",
-          max_tokens: 4096,
-          system: SYSTEM_PROMPT,
+          max_tokens: 3072,
+          system: ANALYZE_SYSTEM_PROMPT,
           tools: [ANALYZE_CODE_TOOL],
           tool_choice: { type: "tool", name: "analyze_code" },
           messages: [{ role: "user", content: buildUserMessage(message) }],
         });
-        const response = await stream.finalMessage();
+        const response1 = await stream1.finalMessage();
         clearInterval(heartbeat);
 
-        const toolBlock = response.content.find((b) => b.type === "tool_use");
-        if (!toolBlock || toolBlock.type !== "tool_use") {
+        const toolBlock1 = response1.content.find((b) => b.type === "tool_use");
+        if (!toolBlock1 || toolBlock1.type !== "tool_use") {
           send(`data: ${JSON.stringify({ error: "No structured output returned from API" })}\n\n`);
           return;
         }
 
-        const analysis = toolBlock.input as AnalysisResult;
-        if (!analysis.code) analysis.code = message;
+        type RawAnalysis = Omit<AnalysisResult, "concepts" | "critiques"> & { code?: string };
+        const coreAnalysis = toolBlock1.input as RawAnalysis;
 
-        if (!analysis.nodes || !analysis.edges) {
+        // If Claude generated code (question mode), emit it before the graph event
+        if (coreAnalysis.code) {
+          send(`data: ${JSON.stringify({ generatedCode: coreAnalysis.code })}\n\n`);
+          delete coreAnalysis.code;
+        }
+
+        if (!coreAnalysis.nodes || !coreAnalysis.edges) {
+          console.error("Incomplete analysis — stop_reason:", response1.stop_reason, "keys:", Object.keys(coreAnalysis));
           send(`data: ${JSON.stringify({ error: "Incomplete analysis result" })}\n\n`);
           return;
         }
 
-        send(`data: ${JSON.stringify({ analysis })}\n\n`);
+        // Send the graph immediately — client renders while enrichment runs
+        const partialAnalysis: AnalysisResult = {
+          ...(coreAnalysis as AnalysisResult),
+          concepts: [],
+          critiques: [],
+        };
+        send(`data: ${JSON.stringify({ analysis: partialAnalysis })}\n\n`);
+
+        // ── Call 2: enrichment (concepts + critiques) ──────────────────────
+        const heartbeat2 = setInterval(() => send(": heartbeat\n\n"), 15000);
+        try {
+          const stream2 = client.messages.stream({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 2048,
+            system: ENRICH_SYSTEM_PROMPT,
+            tools: [ENRICH_ANALYSIS_TOOL],
+            tool_choice: { type: "tool", name: "enrich_analysis" },
+            messages: [{ role: "user", content: buildEnrichMessage(message, coreAnalysis) }],
+          });
+          const response2 = await stream2.finalMessage();
+
+          const toolBlock2 = response2.content.find((b) => b.type === "tool_use");
+          if (toolBlock2 && toolBlock2.type === "tool_use") {
+            send(`data: ${JSON.stringify({ enrichment: toolBlock2.input })}\n\n`);
+          }
+        } finally {
+          clearInterval(heartbeat2);
+        }
       } catch (error) {
         clearInterval(heartbeat);
         console.error("Analysis error:", error instanceof Error ? error.message : error);

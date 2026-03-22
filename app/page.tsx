@@ -44,6 +44,8 @@ export default function Home() {
   const isCritiqueDragging = useRef(false);
   const [panelOrder, setPanelOrder] = useState<Array<'variables' | 'concepts' | 'critique'>>(['variables', 'concepts', 'critique']);
   const panelDragIdRef = useRef<string | null>(null);
+  const submittedCodeRef = useRef<string | null>(null);
+  useEffect(() => { submittedCodeRef.current = submittedCode; }, [submittedCode]);
 
   // Resize observer for the map container
   useEffect(() => {
@@ -115,51 +117,74 @@ export default function Home() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      // Track core analysis so the enrichment handler can reference it
+      let latestAnalysis: AnalysisResult | null = null;
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        if (buffer.includes("\ndata: ") || buffer.startsWith("data: ")) break;
-      }
-      const dataLine = buffer.split("\n").find((l) => l.startsWith("data: "));
-      if (!dataLine) throw new Error("No data received");
-      const data = JSON.parse(dataLine.slice(6));
 
-      if (data.error) {
-        setErrorMessage(data.error);
-      } else if (data.analysis) {
-        const analysis = data.analysis as AnalysisResult;
-        setCurrentAnalysis(analysis);
+        // Process all complete SSE lines from the buffer
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
 
-        // Accumulate concepts (dedup by title), attaching code snippets at accumulation time
-        setAllConcepts((prev) => {
-          const existing = new Set(prev.map((c) => c.title));
-          const codeLines = analysis.code.split("\n");
-          const newConcepts = analysis.concepts
-            .filter((c) => !existing.has(c.title))
-            .map((c) => {
-              if (c.nodeId) {
-                const node = analysis.nodes.find((n) => n.id === c.nodeId);
-                if (node) {
-                  c.codeSnippet = codeLines
-                    .slice(node.codeRange.startLine - 1, node.codeRange.endLine)
-                    .join("\n");
-                  c.language = analysis.language;
-                }
-              }
-              return c;
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = JSON.parse(line.slice(6));
+
+          if (data.generatedCode) {
+            setSubmittedCode(data.generatedCode);
+          } else if (data.error) {
+            setErrorMessage(data.error);
+            setIsLoading(false);
+          } else if (data.analysis) {
+            // First event: core analysis (nodes + edges). Render the graph immediately.
+            const analysis = data.analysis as AnalysisResult;
+            latestAnalysis = analysis;
+            setCurrentAnalysis(analysis);
+            setIsLoading(false);
+          } else if (data.enrichment && latestAnalysis) {
+            // Second event: concepts + critiques. Merge into the rendered analysis.
+            const { concepts, critiques } = data.enrichment as Pick<AnalysisResult, "concepts" | "critiques">;
+
+            setCurrentAnalysis((prev) =>
+              prev ? { ...prev, concepts, critiques } : prev
+            );
+
+            // Accumulate concepts (dedup by title), attaching code snippets
+            setAllConcepts((prev) => {
+              const existing = new Set(prev.map((c) => c.title));
+              const codeLines = message.split("\n");
+              const newConcepts = concepts
+                .filter((c) => !existing.has(c.title))
+                .map((c) => {
+                  if (c.nodeId) {
+                    const node = latestAnalysis!.nodes.find((n) => n.id === c.nodeId);
+                    if (node) {
+                      c.codeSnippet = codeLines
+                        .slice(node.codeRange.startLine - 1, node.codeRange.endLine)
+                        .join("\n");
+                      c.language = latestAnalysis!.language;
+                    }
+                  }
+                  return c;
+                });
+              return [...prev, ...newConcepts];
             });
-          return [...prev, ...newConcepts];
-        });
 
-        const assistantMsg: ChatMessage = {
-          id: `msg_${Date.now()}`,
-          role: "assistant",
-          content: analysis.explanation,
-          analysis,
-          timestamp: Date.now(),
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
+            // Add assistant message once the full picture is available
+            const fullAnalysis: AnalysisResult = { ...latestAnalysis, concepts, critiques };
+            const assistantMsg: ChatMessage = {
+              id: `msg_${Date.now()}`,
+              role: "assistant",
+              content: latestAnalysis.explanation,
+              analysis: fullAnalysis,
+              timestamp: Date.now(),
+            };
+            setMessages((prev) => [...prev, assistantMsg]);
+          }
+        }
       }
     } catch (err) {
       console.error("Fetch error:", err);
@@ -280,7 +305,7 @@ export default function Home() {
 
       const node = prev.nodes[nodeIdx];
       const variable = node.variables[varIndex];
-      let newCode = prev.code;
+      let newCode = submittedCodeRef.current ?? "";
       const lines = newCode.split("\n");
       const start = node.codeRange.startLine - 1;
       const end = Math.min(node.codeRange.endLine, lines.length);
@@ -323,7 +348,8 @@ export default function Home() {
         return { ...n, variables: updatedVars };
       });
 
-      return { ...prev, nodes: updatedNodes, code: newCode };
+      setSubmittedCode(newCode);
+      return { ...prev, nodes: updatedNodes };
     });
   }, []);
 
@@ -449,9 +475,6 @@ export default function Home() {
                 ))}
               </div>
 
-              <div className="px-4 py-2.5 border-t border-[#1e1e1e] bg-[#0d0d0d]">
-                <p className="text-[10px] text-[#888] font-mono">Requires ANTHROPIC_API_KEY in .env.local</p>
-              </div>
             </div>
           )}
         </div>

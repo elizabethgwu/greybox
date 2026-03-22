@@ -47,7 +47,7 @@ function HighlightedLine({ code, language }: { code: string; language: string })
 }
 
 export default function CodePanel({ submittedCode, analysis, selectedNodeId, onNodeSelect, highlightedVariable, colorblindMode }: CodePanelProps) {
-  const code = analysis?.code ?? submittedCode ?? "";
+  const code = submittedCode ?? "";
   const language = analysis?.language ? getLanguageAlias(analysis.language) : "javascript";
   const lines = code.split("\n");
 

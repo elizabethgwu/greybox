@@ -270,36 +270,89 @@ export default function NodeMap({
 
     const nodeMap = new Map(layoutNodes.map((n) => [n.id, n]));
 
-    // Edges — path from source center to just above target shape
+    // Build edge routes — compute control points before drawing
+    interface EdgeRoute {
+      edge: CodeEdge;
+      source: LayoutNode;
+      target: LayoutNode;
+      targetTop: number;
+      cx1: number; cx2: number;
+      midY: number;
+      labelX: number; labelY: number;
+      isConnected: boolean;
+      isDimmed: boolean;
+    }
+
+    const routes: EdgeRoute[] = [];
     edges.forEach((edge) => {
       const source = nodeMap.get(edge.source);
       const target = nodeMap.get(edge.target);
       if (!source || !target) return;
-
       const isConnected = selectedNodeId
         ? edge.source === selectedNodeId || edge.target === selectedNodeId
         : false;
       const isDimmed = selectedNodeId ? !isConnected : false;
-
-      // End path at top of target shape so arrowhead sits at shape edge
       const targetTop = target.y - NODE_SIZE;
       const midY = (source.y + targetTop) / 2;
+      routes.push({
+        edge, source, target, targetTop,
+        cx1: source.x, cx2: target.x,
+        midY,
+        labelX: (source.x + target.x) / 2,
+        labelY: midY,
+        isConnected, isDimmed,
+      });
+    });
 
-      g.append("path")
-        .attr("d", `M ${source.x} ${source.y} C ${source.x} ${midY}, ${target.x} ${midY}, ${target.x} ${targetTop}`)
+    // Bow crossing edge pairs in opposite directions to reduce overlap
+    for (let i = 0; i < routes.length; i++) {
+      for (let j = i + 1; j < routes.length; j++) {
+        const r1 = routes[i], r2 = routes[j];
+        const dxS = r1.source.x - r2.source.x;
+        const dxT = r1.target.x - r2.target.x;
+        // Crossing when source x-order and target x-order are swapped
+        if (dxS !== 0 && dxT !== 0 && Math.sign(dxS) !== Math.sign(dxT)) {
+          const bow = 45;
+          r1.cx1 += bow; r1.cx2 += bow;
+          r2.cx1 -= bow; r2.cx2 -= bow;
+          // Shift labels sideways too so they don't stack
+          r1.labelX += bow * 0.5;
+          r2.labelX -= bow * 0.5;
+        }
+      }
+    }
+
+    // Separate labels that are too close vertically (parallel edges, same layer)
+    for (let i = 0; i < routes.length; i++) {
+      for (let j = i + 1; j < routes.length; j++) {
+        if (!routes[i].edge.label || !routes[j].edge.label) continue;
+        const dx = Math.abs(routes[i].labelX - routes[j].labelX);
+        const dy = Math.abs(routes[i].labelY - routes[j].labelY);
+        if (dx < 80 && dy < 24) {
+          routes[i].labelY -= 14;
+          routes[j].labelY += 14;
+        }
+      }
+    }
+
+    // Render unconnected edges first so selected/connected edges appear on top
+    const sortedRoutes = [...routes].sort((a, b) => +a.isConnected - +b.isConnected);
+
+    sortedRoutes.forEach(({ edge, source, target, targetTop, cx1, cx2, midY, labelX, labelY, isConnected, isDimmed }) => {
+      const edgeG = g.append("g");
+
+      edgeG.append("path")
+        .attr("d", `M ${source.x} ${source.y} C ${cx1} ${midY}, ${cx2} ${midY}, ${target.x} ${targetTop}`)
         .attr("fill", "none")
         .attr("stroke", isConnected ? d3Colors.edgeActive : d3Colors.edgeDefault)
-        .attr("stroke-width", isConnected ? 2 : 1.5)
+        .attr("stroke-width", isDimmed ? 1 : isConnected ? 2 : 1.5)
         .attr("stroke-dasharray", isConnected ? "none" : "5,3")
         .attr("marker-end", isConnected ? "url(#arrowhead-hi)" : "url(#arrowhead)")
-        .attr("opacity", isDimmed ? 0.45 : isConnected ? 1 : 0.6);
+        .attr("opacity", isDimmed ? 0.08 : isConnected ? 1 : 0.6);
 
       if (edge.label) {
-        const lx = (source.x + target.x) / 2;
-        const ly = (source.y + targetTop) / 2;
-
-        const labelG = g.append("g").attr("transform", `translate(${lx},${ly})`).attr("pointer-events", "none")
-          .attr("opacity", isDimmed ? 0.45 : 1);
+        const labelG = edgeG.append("g").attr("transform", `translate(${labelX},${labelY})`).attr("pointer-events", "none")
+          .attr("opacity", isDimmed ? 0.08 : 1);
 
         const edgeRect = labelG.append("rect")
           .attr("y", -9).attr("height", 16).attr("rx", 3)
@@ -320,8 +373,11 @@ export default function NodeMap({
       }
     });
 
-    // Nodes
-    layoutNodes.forEach((node) => {
+    // Nodes — selected node rendered last so it appears above all paths
+    const sortedNodes = [...layoutNodes].sort((a, b) =>
+      a.id === selectedNodeId ? 1 : b.id === selectedNodeId ? -1 : 0
+    );
+    sortedNodes.forEach((node) => {
       const isSelected = node.id === selectedNodeId;
       const colorVar = `var(--accent-${node.type})`;
 
