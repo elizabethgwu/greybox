@@ -50,6 +50,21 @@ export default function CodePanel({ submittedCode, analysis, selectedNodeId, onN
   const code = submittedCode ?? "";
   const language = analysis?.language ? getLanguageAlias(analysis.language) : "javascript";
   const lines = code.split("\n");
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to the first line containing the highlighted variable within the selected node
+  useEffect(() => {
+    if (!highlightedVariable || !analysis || !selectedNodeId) return;
+    const node = analysis.nodes.find((n) => n.id === selectedNodeId);
+    if (!node) return;
+    const relIdx = lines
+      .slice(node.codeRange.startLine - 1, node.codeRange.endLine)
+      .findIndex((l) => l.includes(highlightedVariable));
+    if (relIdx === -1) return;
+    const lineNum = node.codeRange.startLine + relIdx;
+    const el = scrollContainerRef.current?.querySelector(`[data-line="${lineNum}"]`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightedVariable, selectedNodeId, analysis, lines]);
 
   const lineNodeMap = new Map<number, CodeNode[]>();
   if (analysis) {
@@ -98,7 +113,7 @@ export default function CodePanel({ submittedCode, analysis, selectedNodeId, onN
         )}
       </div>
 
-      <div className="flex-1 overflow-auto font-mono text-sm leading-6">
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto font-mono text-sm leading-6">
         <div className="relative">
           {lines.map((line, i) => {
             const lineNum = i + 1;
@@ -121,7 +136,7 @@ export default function CodePanel({ submittedCode, analysis, selectedNodeId, onN
               line.includes(highlightedVariable);
 
             return (
-              <div key={i} style={{ opacity: dimmed ? 0.35 : 1, transition: "opacity 0.15s" }}>
+              <div key={i} data-line={lineNum} style={{ opacity: dimmed ? 0.35 : 1, transition: "opacity 0.15s" }}>
                 {annotation && annotation.node.decision && (
                   <div
                     className="flex items-center gap-2 px-4 py-1.5 text-xs border-l-2 ml-12 mr-4 my-1 rounded-r"

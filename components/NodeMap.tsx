@@ -227,7 +227,7 @@ export default function NodeMap({
     // Light/dark palette for D3 inline colors
     const d3Colors = lightMode
       ? { pageBg: "#f0ebe3", pillBg: "#e6e0d7", pillStroke: "#ddd7cc", edgeDefault: "#c4bdb2", edgeActive: "#5a5045", labelText: "#60564b", labelActive: "#3a3228", arrow: "#c4bdb2", arrowHi: "#5a5045" }
-      : { pageBg: "#0a0a0a", pillBg: "#141414", pillStroke: "#2a2a2a", edgeDefault: "#333", edgeActive: "#888", labelText: "#555", labelActive: "#999", arrow: "#444", arrowHi: "#999" };
+      : { pageBg: "#0d0d0d", pillBg: "#141414", pillStroke: "#2a2a2a", edgeDefault: "#333", edgeActive: "#888", labelText: "#555", labelActive: "#999", arrow: "#444", arrowHi: "#999" };
 
     const defs = svg.append("defs");
     // Default arrowhead
@@ -277,6 +277,33 @@ export default function NodeMap({
     }
 
     const nodeMap = new Map(layoutNodes.map((n) => [n.id, n]));
+    const nodeLayerMap = new Map<string, number>();
+
+    // Compute layer index per node (BFS) so we can detect long-range edges
+    {
+      const adjL = new Map<string, string[]>();
+      const inDegL = new Map<string, number>();
+      layoutNodes.forEach(n => { adjL.set(n.id, []); inDegL.set(n.id, 0); });
+      edges.forEach(e => {
+        adjL.get(e.source)?.push(e.target);
+        inDegL.set(e.target, (inDegL.get(e.target) || 0) + 1);
+      });
+      let bfsQ = layoutNodes.filter(n => !inDegL.get(n.id)).map(n => n.id);
+      const bfsVis = new Set<string>();
+      let li = 0;
+      while (bfsQ.length) {
+        bfsQ.forEach(id => { nodeLayerMap.set(id, li); bfsVis.add(id); });
+        const next: string[] = [];
+        bfsQ.forEach(id => (adjL.get(id) || []).forEach(t => {
+          if (!bfsVis.has(t)) {
+            inDegL.set(t, (inDegL.get(t) || 0) - 1);
+            if (!inDegL.get(t)) next.push(t);
+          }
+        }));
+        bfsQ = next; li++;
+      }
+      layoutNodes.forEach(n => { if (!nodeLayerMap.has(n.id)) nodeLayerMap.set(n.id, li++); });
+    }
 
     // Build edge routes — compute control points before drawing
     interface EdgeRoute {
@@ -288,6 +315,7 @@ export default function NodeMap({
       labelX: number; labelY: number;
       isConnected: boolean;
       isDimmed: boolean;
+      lateralOffset: number;
     }
 
     const routes: EdgeRoute[] = [];
@@ -300,16 +328,45 @@ export default function NodeMap({
         : false;
       const isDimmed = selectedNodeId ? !isConnected : false;
       const sourceBottom = source.y + shapeVerticalExtent(source.type).bottom;
-      const targetTop = target.y - shapeVerticalExtent(target.type).top;
+      // Stop the path 10px before the target shape so the arrowhead sits in
+      // the gap between nodes rather than rendering inside the target.
+      const targetTop = target.y - shapeVerticalExtent(target.type).top - 10;
+      const srcLayer = nodeLayerMap.get(edge.source) ?? 0;
+      const tgtLayer = nodeLayerMap.get(edge.target) ?? 0;
+      const lateralOffset = tgtLayer - srcLayer > 1 ? 100 : 0;
+      const midY = (sourceBottom + targetTop) / 2;
       routes.push({
         edge, source, target, sourceBottom, targetTop,
-        labelX: (source.x + target.x) / 2,
-        labelY: (sourceBottom + targetTop) / 2,
-        isConnected, isDimmed,
+        // At t=0.5 on a laterally-offset bezier, midpoint shifts by 0.75 * offset
+        labelX: (source.x + target.x) / 2 + lateralOffset * 0.75,
+        labelY: midY,
+        isConnected, isDimmed, lateralOffset,
       });
     });
 
-    // Separate labels that are too close vertically (parallel edges, same layer)
+    // Step 1 — Push edge labels away from intermediate nodes.
+    // A label at the midpoint of a long-range edge often lands exactly on an
+    // intermediate node. The node's background blocker hides thin paths but
+    // label pills can be 300–400px wide and bleed outside the blocker area.
+    for (const route of routes) {
+      if (!route.edge.label) continue;
+      let moved = true;
+      let guard = 0;
+      while (moved && guard++ < 6) {
+        moved = false;
+        for (const node of layoutNodes) {
+          if (node.id === route.edge.source || node.id === route.edge.target) continue;
+          const nodeTop    = node.y - NODE_SIZE - 10;   // above shape
+          const nodeBottom = node.y + NODE_SIZE + 60;   // below name pill
+          if (route.labelY > nodeTop && route.labelY < nodeBottom) {
+            route.labelY = nodeBottom + 16;             // push below node
+            moved = true;
+          }
+        }
+      }
+    }
+
+    // Step 2 — Separate labels that are too close vertically (parallel edges).
     for (let i = 0; i < routes.length; i++) {
       for (let j = i + 1; j < routes.length; j++) {
         if (!routes[i].edge.label || !routes[j].edge.label) continue;
@@ -325,41 +382,44 @@ export default function NodeMap({
     // Render unconnected edges first so selected/connected edges appear on top
     const sortedRoutes = [...routes].sort((a, b) => +a.isConnected - +b.isConnected);
 
-    const edgesG = g.append("g");
+    // Two-pass rendering: all paths first, then all labels on top.
+    // This prevents one edge's path from painting over another edge's label.
+    const edgePathsG = g.append("g");
+    const edgeLabelsG = g.append("g");
 
-    sortedRoutes.forEach(({ edge, source, target, sourceBottom, targetTop, labelX, labelY, isConnected, isDimmed }) => {
-      const edgeG = edgesG.append("g");
-
-      edgeG.append("path")
-        .attr("d", `M ${source.x} ${sourceBottom} L ${target.x} ${targetTop}`)
+    sortedRoutes.forEach(({ source, target, sourceBottom, targetTop, isConnected, isDimmed, lateralOffset }) => {
+      const midY = (sourceBottom + targetTop) / 2;
+      edgePathsG.append("path")
+        .attr("d", `M ${source.x} ${sourceBottom} C ${source.x + lateralOffset} ${midY} ${target.x + lateralOffset} ${midY} ${target.x} ${targetTop}`)
         .attr("fill", "none")
         .attr("stroke", isConnected ? d3Colors.edgeActive : d3Colors.edgeDefault)
         .attr("stroke-width", isDimmed ? 1 : isConnected ? 2 : 1.5)
         .attr("stroke-dasharray", isConnected ? "none" : "5,3")
         .attr("marker-end", isConnected ? "url(#arrowhead-hi)" : "url(#arrowhead)")
         .attr("opacity", isDimmed ? 0.08 : isConnected ? 1 : 0.6);
+    });
 
-      if (edge.label) {
-        const labelG = edgeG.append("g").attr("transform", `translate(${labelX},${labelY})`).attr("pointer-events", "none")
-          .attr("opacity", isDimmed ? 0.08 : 1);
+    sortedRoutes.forEach(({ edge, labelX, labelY, isConnected, isDimmed }) => {
+      if (!edge.label) return;
+      const labelG = edgeLabelsG.append("g").attr("transform", `translate(${labelX},${labelY})`).attr("pointer-events", "none")
+        .attr("opacity", isDimmed ? 0.08 : 1);
 
-        const edgeRect = labelG.append("rect")
-          .attr("y", -9).attr("height", 16).attr("rx", 3)
-          .attr("fill", d3Colors.pillBg)
-          .attr("stroke", d3Colors.pillStroke)
-          .attr("stroke-width", 0.5);
+      const edgeRect = labelG.append("rect")
+        .attr("y", -9).attr("height", 16).attr("rx", 3)
+        .attr("fill", d3Colors.pillBg)
+        .attr("stroke", d3Colors.pillStroke)
+        .attr("stroke-width", 0.5);
 
-        const edgeText = labelG.append("text")
-          .attr("text-anchor", "middle").attr("y", 4)
-          .attr("font-size", 9)
-          .attr("fill", isConnected ? d3Colors.labelActive : d3Colors.labelText)
-          .attr("font-family", "monospace")
-          .text(edge.label);
+      const edgeText = labelG.append("text")
+        .attr("text-anchor", "middle").attr("y", 4)
+        .attr("font-size", 9)
+        .attr("fill", isConnected ? d3Colors.labelActive : d3Colors.labelText)
+        .attr("font-family", "monospace")
+        .text(edge.label);
 
-        const ebbox = (edgeText.node() as SVGTextElement | null)?.getBBox();
-        const ew = (ebbox?.width ?? 60) + 16;
-        edgeRect.attr("x", -ew / 2).attr("width", ew);
-      }
+      const ebbox = (edgeText.node() as SVGTextElement | null)?.getBBox();
+      const ew = (ebbox?.width ?? 60) + 16;
+      edgeRect.attr("x", -ew / 2).attr("width", ew);
     });
 
     // Nodes — selected node rendered last so it appears above all paths
@@ -380,7 +440,7 @@ export default function NodeMap({
 
       // Background shape (slightly larger than node, page bg color) blocks edges
       // passing through. Colocated in nodeG so it moves with zoom/pan correctly.
-      const pad = 6;
+      const pad = 14;
       const bg = d3Colors.pageBg;
       const shape = NODE_CONFIG[node.type].shape;
       switch (shape) {

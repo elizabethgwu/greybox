@@ -112,7 +112,7 @@ export default function NodeInspector({ node, onClose, onVariableClick, activeVa
               return (
                 <button
                   key={i}
-                  className="w-full flex items-center gap-2 text-xs text-left rounded px-1.5 py-1 transition-colors"
+                  className="w-full flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-xs text-left rounded px-1.5 py-1 transition-colors"
                   style={{
                     background: isActive ? colorAlpha(12) : "transparent",
                     outline: isActive ? `1px solid ${colorAlpha(30)}` : "none",
@@ -120,13 +120,13 @@ export default function NodeInspector({ node, onClose, onVariableClick, activeVa
                   onClick={() => onVariableClick?.(isActive ? null : v.name)}
                   title="Click to highlight in code"
                 >
-                  <code className="font-mono shrink-0 px-1.5 py-0.5 rounded" style={{ color: colorVar, background: colorAlpha(10) }}>
+                  <code className="font-mono break-all px-1.5 py-0.5 rounded" style={{ color: colorVar, background: colorAlpha(10) }}>
                     {v.name}
                   </code>
                   <span className="text-[#666]">:</span>
-                  <span className="text-[#888] font-mono">{v.type}</span>
+                  <span className="text-[#888] font-mono break-all">{v.type}</span>
                   {v.value && (
-                    <span className="text-[#777] ml-auto shrink-0">= {v.value}</span>
+                    <span className="text-[#777] break-all">= {v.value}</span>
                   )}
                 </button>
               );
