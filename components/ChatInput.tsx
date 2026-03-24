@@ -97,7 +97,7 @@ export default function ChatInput({ onSubmit, isLoading, variant = "bottom" }: C
     return (
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="px-4 pt-4 pb-2 shrink-0">
-          <span className="text-[10px] font-mono text-[#999] tracking-wider">
+          <span className="text-[12px] font-mono text-[#999] tracking-wider">
             PASTE CODE OR ASK A QUESTION
           </span>
         </div>

@@ -49,7 +49,7 @@ export default function CodeBlock({ code, language = "javascript", maxLines, cla
   return (
     <div className={`overflow-x-auto ${className ?? ""}`}>
       <pre
-        className="!m-0 !p-0 !bg-transparent text-[11px] leading-[1.65] font-mono"
+        className="!m-0 !p-0 !bg-transparent text-[13px] leading-[1.65] font-mono"
         style={{ background: "transparent" }}
       >
         <code
@@ -60,7 +60,7 @@ export default function CodeBlock({ code, language = "javascript", maxLines, cla
         </code>
       </pre>
       {truncated && (
-        <p className="text-[9px] font-mono text-[#555] pt-1">
+        <p className="text-[11px] font-mono text-[#888] pt-1">
           …{lines.length - maxLines!} more lines
         </p>
       )}

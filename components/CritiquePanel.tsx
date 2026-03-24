@@ -38,10 +38,10 @@ function CritiqueCardItem({ critique, language, onSelectNode, onExpand, panelOpe
       >
         <h4 className="text-sm font-semibold text-white leading-tight">{critique.title}</h4>
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[9px] font-mono tracking-wider px-1.5 py-0.5 rounded bg-[#222] text-[#999]">
+          <span className="text-[11px] font-mono tracking-wider px-1.5 py-0.5 rounded bg-[#222] text-[#999]">
             {COMPLEXITY_LABEL[critique.complexity]}
           </span>
-          <span className="text-[#555] text-[10px]">{expanded ? "▴" : "▾"}</span>
+          <span className="text-[#888] text-[12px]">{expanded ? "▴" : "▾"}</span>
         </div>
       </button>
 
@@ -55,7 +55,7 @@ function CritiqueCardItem({ critique, language, onSelectNode, onExpand, panelOpe
         <div className="border-t border-[#1e1e1e] bg-[#0d0d0d] px-3 py-2.5 space-y-2.5">
           {/* How it works */}
           <div>
-            <p className="text-[10px] font-mono tracking-widest text-[#999] mb-1">HOW IT WORKS</p>
+            <p className="text-[12px] font-mono tracking-widest text-[#999] mb-1">HOW IT WORKS</p>
             <p className="text-xs text-[#bbb] leading-relaxed">{critique.explanation}</p>
           </div>
 
@@ -66,9 +66,9 @@ function CritiqueCardItem({ critique, language, onSelectNode, onExpand, panelOpe
               onClick={() => { if (critique.nodeId) onSelectNode?.(critique.nodeId); }}
             >
               <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-[#1e1e1e]">
-                <span className="text-[9px] font-mono tracking-widest text-[#999]">EXAMPLE</span>
+                <span className="text-[11px] font-mono tracking-widest text-[#999]">EXAMPLE</span>
                 {critique.nodeId && (
-                  <span className="text-[9px] font-mono text-[#888] group-hover:text-[#bbb] transition-colors">↗ jump</span>
+                  <span className="text-[11px] font-mono text-[#888] group-hover:text-[#bbb] transition-colors">↗ jump</span>
                 )}
               </div>
               <div className="px-2.5 py-2">
@@ -120,7 +120,7 @@ export default function CritiquePanel({
     <div className="shrink-0 flex">
       {/* Drag handle */}
       <div
-        className="w-1 shrink-0 cursor-col-resize bg-[#222] hover:bg-[#4A90D9]/50 transition-colors"
+        className="resize-handle"
         onMouseDown={onDragStart}
       />
 

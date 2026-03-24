@@ -148,9 +148,9 @@ export default function MiniMap({ nodes, edges, selectedNodeId, onNodeSelect, co
         className="px-3 py-1.5 border-b border-[#333] flex items-center gap-2 cursor-grab active:cursor-grabbing"
         onMouseDown={handleMouseDown}
       >
-        <span className="text-[10px] font-mono tracking-wider text-[#888] uppercase">Minimap</span>
+        <span className="text-[12px] font-mono tracking-wider text-[#888] uppercase">Minimap</span>
         <button
-          className="text-[#888] hover:text-[#ccc] text-[10px] ml-auto leading-none"
+          className="text-[#888] hover:text-[#ccc] text-[12px] ml-auto leading-none"
           onMouseDown={(e) => e.stopPropagation()}
           onClick={() => setCollapsed((c) => !c)}
           aria-label={collapsed ? "Expand minimap" : "Collapse minimap"}

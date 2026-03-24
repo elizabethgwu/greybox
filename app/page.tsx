@@ -33,6 +33,9 @@ export default function Home() {
   const [highlightedVariable, setHighlightedVariable] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const infoRef = useRef<HTMLDivElement>(null);
+  const [commitsOpen, setCommitsOpen] = useState(false);
+  const [commits, setCommits] = useState<{ hash: string; message: string; date: string }[]>([]);
+  const commitsRef = useRef<HTMLDivElement>(null);
   const [explanationCollapsed, setExplanationCollapsed] = useState(false);
   const summaryRef = useRef<HTMLDivElement>(null);
   const [panelWidth, setPanelWidth] = useState(500);
@@ -71,6 +74,20 @@ export default function Home() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [infoOpen]);
+
+  useEffect(() => {
+    if (!commitsOpen) return;
+    if (commits.length === 0) {
+      fetch("/api/commits").then((r) => r.json()).then((d) => setCommits(d.commits ?? []));
+    }
+    const handler = (e: MouseEvent) => {
+      if (commitsRef.current && !commitsRef.current.contains(e.target as Node)) {
+        setCommitsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [commitsOpen, commits.length]);
 
   useEffect(() => {
     if (explanationCollapsed) return;
@@ -301,7 +318,7 @@ export default function Home() {
       <header className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-[#222] bg-[#0a0a0a]">
         <div className="flex items-center gap-3">
           <h1 className="text-sm font-semibold tracking-tight">Greybox</h1>
-          <span className="text-[10px] font-mono text-[#999] tracking-wider border border-[#444] rounded px-1.5 py-0.5">
+          <span className="text-[12px] font-mono text-[#999] tracking-wider border border-[#444] rounded px-1.5 py-0.5">
             PROTOTYPE
           </span>
         </div>
@@ -310,7 +327,7 @@ export default function Home() {
           {/* Dark / Light mode toggle */}
           <button
             onClick={() => setLightMode((v) => !v)}
-            className={`h-7 px-2.5 rounded-full border flex items-center gap-1.5 text-[10px] font-mono tracking-wide transition-colors ${
+            className={`h-7 px-2.5 rounded-full border flex items-center gap-1.5 text-[12px] font-mono tracking-wide transition-colors ${
               lightMode
                 ? "border-[#666] text-[#555] bg-[#ddd]"
                 : "border-[#444] text-[#888] hover:text-[#ccc] hover:border-[#666]"
@@ -340,7 +357,7 @@ export default function Home() {
           {/* Colorblind mode toggle */}
           <button
             onClick={() => setColorblindMode((v) => !v)}
-            className={`h-7 px-2.5 rounded-full border flex items-center gap-1.5 text-[10px] font-mono tracking-wide transition-colors ${
+            className={`h-7 px-2.5 rounded-full border flex items-center gap-1.5 text-[12px] font-mono tracking-wide transition-colors ${
               colorblindMode
                 ? "border-[#56B4E9] text-[#56B4E9] bg-[#56B4E9]/10"
                 : "border-[#444] text-[#888] hover:text-[#ccc] hover:border-[#666]"
@@ -354,6 +371,67 @@ export default function Home() {
             </svg>
             colorblind mode
           </button>
+
+          {/* Commits button + popover */}
+          <div ref={commitsRef} className="relative">
+            <button
+              onClick={() => setCommitsOpen((v) => !v)}
+              className={`h-7 px-2.5 rounded-full border flex items-center gap-1.5 text-[12px] font-mono tracking-wide transition-colors ${
+                commitsOpen ? "border-[#555] text-[#ccc] bg-[#1a1a1a]" : "border-[#444] text-[#888] hover:text-[#ccc] hover:border-[#666]"
+              }`}
+              title="Recent commits"
+            >
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <circle cx="6" cy="6" r="2" stroke="currentColor" strokeWidth="1.2"/>
+                <line x1="6" y1="1" x2="6" y2="3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                <line x1="6" y1="8.5" x2="6" y2="11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+              changelog
+            </button>
+
+            {commitsOpen && (
+              <div className="absolute right-0 top-10 w-80 bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-[#1e1e1e]">
+                  <p className="text-sm font-semibold text-white">Recent changes</p>
+                  <p className="text-xs text-[#888] mt-0.5">Last 5 commits</p>
+                </div>
+                <div className="divide-y divide-[#1e1e1e]">
+                  {commits.length === 0 ? (
+                    <p className="px-4 py-3 text-xs text-[#888]">Loading…</p>
+                  ) : (
+                    commits.map((c) => (
+                      <div key={c.hash} className="px-4 py-2.5 flex items-center gap-3">
+                        <span className="shrink-0 font-mono text-[12px] text-[#888] mt-0.5">{c.hash}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-[#ddd] leading-snug">{c.message}</p>
+                          <p className="text-[12px] text-[#888] mt-0.5">{c.date}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Roadmap */}
+                <div className="border-t border-[#1e1e1e]">
+                  <div className="px-4 py-3 border-b border-[#1e1e1e]">
+                    <p className="text-sm font-semibold text-white">Roadmap</p>
+                  </div>
+                  <div className="px-4 py-2.5 space-y-2">
+                    {[
+                      { label: "Add other domains", done: false },
+                      { label: "Writing", done: false, active: true },
+                    ].map(({ label, done, active }) => (
+                      <div key={label} className="flex items-center gap-2.5">
+                        <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${done ? "bg-[#4CAF7D]" : active ? "bg-[#E5A832]" : "bg-[#333]"}`} />
+                        <span className={`text-xs leading-none ${done ? "text-[#888] line-through" : active ? "text-[#ddd]" : "text-[#999]"}`}>{label}</span>
+                        {active && <span className="text-[11px] font-mono leading-none text-[#E5A832] tracking-wider">IN PROGRESS</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Info button + popover */}
           <div ref={infoRef} className="relative">
@@ -398,7 +476,7 @@ export default function Home() {
                   },
                 ].map(({ step, title, body }) => (
                   <div key={step} className="flex gap-3">
-                    <span className="shrink-0 w-5 h-5 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-[10px] font-mono text-[#888]">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-[12px] font-mono text-[#888]">
                       {step}
                     </span>
                     <div>
@@ -425,12 +503,12 @@ export default function Home() {
               <>
                 {/* Header */}
                 <div className="flex items-center border-b border-[#222] shrink-0">
-                  <span className="px-4 py-2 text-[10px] font-mono tracking-wider text-[#aaa]">
+                  <span className="px-4 py-2 text-[12px] font-mono tracking-wider text-[#aaa]">
                     YOUR CODE
                   </span>
                   <button
                     onClick={handleNew}
-                    className="ml-auto px-4 py-2 text-[10px] font-mono text-[#888] hover:text-[#ccc] transition-colors flex items-center gap-1"
+                    className="ml-auto px-4 py-2 text-[12px] font-mono text-[#888] hover:text-[#ccc] transition-colors flex items-center gap-1"
                   >
                     ↩ New
                   </button>
@@ -453,7 +531,7 @@ export default function Home() {
           </div>
           {/* Resize handle */}
           <div
-            className="w-1 shrink-0 cursor-col-resize bg-[#222] hover:bg-[#4A90D9]/50 transition-colors"
+            className="resize-handle"
             onMouseDown={handlePanelDragStart}
           />
         </div>
@@ -498,7 +576,7 @@ export default function Home() {
                 <div className="bg-[#111]/90 backdrop-blur-sm border border-[#222] rounded-lg overflow-hidden">
                   <button
                     onClick={() => setExplanationCollapsed((v) => !v)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-mono text-[#888] hover:text-[#bbb] transition-colors tracking-wider"
+                    className="w-full flex items-center justify-between px-3 py-2 text-[12px] font-mono text-[#888] hover:text-[#bbb] transition-colors tracking-wider"
                   >
                     <span>SUMMARY</span>
                     <span>{explanationCollapsed ? "▸" : "▾"}</span>

@@ -125,7 +125,7 @@ export default function CodePanel({ submittedCode, analysis, selectedNodeId, onN
             {(Object.entries(NODE_CONFIG) as [string, typeof NODE_CONFIG.scope][]).map(([key, cfg]) => (
               <div key={key} className="flex items-center gap-1.5">
                 <span className="text-xs" style={{ color: `var(--accent-${key})` }}>{cfg.icon}</span>
-                <span className="text-[10px] font-mono text-[#888]">{cfg.label}</span>
+                <span className="text-[12px] font-mono text-[#888]">{cfg.label}</span>
               </div>
             ))}
           </div>
@@ -190,7 +190,7 @@ export default function CodePanel({ submittedCode, analysis, selectedNodeId, onN
                 {parallelAnnotation && (
                   <div
                     className="flex items-center gap-2 px-4 py-1.5 text-xs border-l-2 ml-12 mr-4 my-1 rounded-r"
-                    style={{ borderColor: "rgba(74,144,217,0.7)", background: "color-mix(in srgb, var(--accent-process) 7%, transparent)" }}
+                    style={{ borderColor: "color-mix(in srgb, var(--accent-process) 70%, transparent)", background: "color-mix(in srgb, var(--accent-process) 7%, transparent)" }}
                   >
                     <span style={{ color: "var(--accent-process)" }}>∥</span>
                     <span className="text-[#888]">
@@ -206,8 +206,8 @@ export default function CodePanel({ submittedCode, analysis, selectedNodeId, onN
                     style={{ color: highlight.colorVar }}
                     onClick={() => { if (analysis) onNodeSelect(node.id === selectedNodeId ? null : node.id); }}
                   >
-                    <span className="text-[10px]">{highlight.icon}</span>
-                    <span className="text-[10px] font-mono tracking-wider opacity-70">{node.label.toUpperCase()}</span>
+                    <span className="text-[12px]">{highlight.icon}</span>
+                    <span className="text-[12px] font-mono tracking-wider opacity-70">{node.label.toUpperCase()}</span>
                     {node.secondaryNodeIds && node.secondaryNodeIds.length > 0 && analysis && (
                       <span className="flex items-center gap-0.5 ml-1 opacity-50">
                         {node.secondaryNodeIds.map((sid) => {

@@ -102,8 +102,8 @@ export default function PaperUpload({ onSubmit, isLoading }: PaperUploadProps) {
               </svg>
             </div>
             <p className="text-xs font-medium text-[#ddd] truncate max-w-[180px]">{selectedFile.name}</p>
-            <p className="text-[10px] font-mono text-[#666]">{formatSize(selectedFile.size)}</p>
-            <p className="text-[10px] text-[#555] mt-1">click to change</p>
+            <p className="text-[12px] font-mono text-[#666]">{formatSize(selectedFile.size)}</p>
+            <p className="text-[12px] text-[#555] mt-1">click to change</p>
           </div>
         ) : (
           <div className="text-center space-y-3 px-4">
@@ -116,16 +116,16 @@ export default function PaperUpload({ onSubmit, isLoading }: PaperUploadProps) {
             </div>
             <div>
               <p className="text-xs font-medium text-[#aaa]">Drop a PDF here</p>
-              <p className="text-[10px] text-[#666] mt-0.5">or click to browse</p>
+              <p className="text-[12px] text-[#666] mt-0.5">or click to browse</p>
             </div>
-            <p className="text-[9px] font-mono text-[#444] tracking-wide">PDF · max 20MB</p>
+            <p className="text-[11px] font-mono text-[#444] tracking-wide">PDF · max 20MB</p>
           </div>
         )}
       </div>
 
       {/* Error message */}
       {error && (
-        <p className="text-[10px] font-mono text-[#E05252] px-1">{error}</p>
+        <p className="text-[12px] font-mono text-[#E05252] px-1">{error}</p>
       )}
 
       {/* Analyze button */}

@@ -5,14 +5,14 @@ import { CodeNode, CodeAssumption, NODE_CONFIG } from "@/lib/types";
 function AssumptionsSection({ assumptions }: { assumptions: CodeAssumption[] }) {
   return (
     <div className="px-4 py-3 border-b border-[#222]">
-      <h4 className="text-[10px] font-mono tracking-wider text-[#888] uppercase mb-2">
+      <h4 className="text-[12px] font-mono tracking-wider text-[#888] uppercase mb-2">
         Assumptions
       </h4>
       <div>
         {assumptions.map((a, i) => (
           <div key={i} className={`pb-1.5 ${i < assumptions.length - 1 ? "border-b border-[#1e1e1e] mb-1.5" : ""}`}>
             <div className="flex items-start gap-2 px-1.5 py-1">
-              <span className="inline-block w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 bg-[#555]" />
+              <span className="inline-block w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: 'var(--fg-muted)' }} />
               <span className="text-[#c0c0c0] text-xs flex-1">{a.text}</span>
             </div>
             {a.reason && (
@@ -42,7 +42,7 @@ function AssumptionsSection({ assumptions }: { assumptions: CodeAssumption[] }) 
                     borderBottomLeftRadius: 3,
                   }}
                 />
-                <p className="text-xs text-[#666] leading-relaxed italic">{a.alternative}</p>
+                <p className="text-xs text-[#888] leading-relaxed italic">{a.alternative}</p>
               </div>
             )}
           </div>
@@ -82,7 +82,7 @@ export default function NodeInspector({ node, onClose, onVariableClick, activeVa
           </span>
           <div>
             <div className="text-sm font-semibold text-white">{node.label}</div>
-            <div className="text-[10px] font-mono tracking-wider" style={{ color: colorVar }}>
+            <div className="text-[12px] font-mono tracking-wider" style={{ color: colorVar }}>
               {config.label} · Lines {node.codeRange.startLine}–{node.codeRange.endLine}
             </div>
           </div>
@@ -103,7 +103,7 @@ export default function NodeInspector({ node, onClose, onVariableClick, activeVa
       {/* Variables */}
       {node.variables.length > 0 && (
         <div className="px-4 py-3 border-b border-[#222]">
-          <h4 className="text-[10px] font-mono tracking-wider text-[#888] uppercase mb-2">
+          <h4 className="text-[12px] font-mono tracking-wider text-[#888] uppercase mb-2">
             Variables at this point
           </h4>
           <div className="space-y-1.5">
@@ -123,10 +123,10 @@ export default function NodeInspector({ node, onClose, onVariableClick, activeVa
                   <code className="font-mono break-all px-1.5 py-0.5 rounded" style={{ color: colorVar, background: colorAlpha(10) }}>
                     {v.name}
                   </code>
-                  <span className="text-[#666]">:</span>
+                  <span className="text-[#888]">:</span>
                   <span className="text-[#888] font-mono break-all">{v.type}</span>
                   {v.value && (
-                    <span className="text-[#777] break-all">= {v.value}</span>
+                    <span className="text-[#888] break-all">= {v.value}</span>
                   )}
                 </button>
               );
@@ -143,7 +143,7 @@ export default function NodeInspector({ node, onClose, onVariableClick, activeVa
       {/* Decision (only for decision nodes) */}
       {node.decision && (
         <div className="px-4 py-3">
-          <h4 className="text-[10px] font-mono tracking-wider uppercase mb-2" style={{ color: "var(--accent-decision)" }}>
+          <h4 className="text-[12px] font-mono tracking-wider uppercase mb-2" style={{ color: "var(--accent-decision)" }}>
             ⟐ Decision Made
           </h4>
           <div className="text-xs space-y-2">
@@ -157,7 +157,7 @@ export default function NodeInspector({ node, onClose, onVariableClick, activeVa
             </div>
             {node.decision.alternatives.length > 0 && (
               <div className="mt-2 space-y-1.5">
-                <div className="text-[10px] font-mono tracking-wider text-[#999] uppercase">
+                <div className="text-[12px] font-mono tracking-wider text-[#999] uppercase">
                   Alternatives considered
                 </div>
                 {node.decision.alternatives.map((alt, i) => (
@@ -186,7 +186,7 @@ export default function NodeInspector({ node, onClose, onVariableClick, activeVa
 
       {node.parallelGroupId && (
         <div className="px-4 py-3">
-          <h4 className="text-[10px] font-mono tracking-wider uppercase mb-2" style={{ color: "var(--accent-process)" }}>
+          <h4 className="text-[12px] font-mono tracking-wider uppercase mb-2" style={{ color: "var(--accent-process)" }}>
             ∥ Concurrent Execution
           </h4>
           <div className="text-xs space-y-2">
@@ -201,7 +201,7 @@ export default function NodeInspector({ node, onClose, onVariableClick, activeVa
 
       {node.loop && (
         <div className="px-4 py-3">
-          <h4 className="text-[10px] font-mono tracking-wider uppercase mb-2" style={{ color: "var(--accent-process)" }}>
+          <h4 className="text-[12px] font-mono tracking-wider uppercase mb-2" style={{ color: "var(--accent-process)" }}>
             ↻ Iterative Execution
           </h4>
           <div className="text-xs space-y-2">

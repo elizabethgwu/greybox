@@ -59,8 +59,8 @@ function CodeSnippet({
     >
       {/* snippet header */}
       <div className={`flex items-center justify-between px-2.5 py-1.5 border-b ${isActive ? "border-[#333]" : "border-[#1e1e1e] group-hover:border-[#2a2a2a]"}`}>
-        <span className="text-[9px] font-mono tracking-widest text-[#999]">IN THIS CODE</span>
-        <span className={`text-[9px] font-mono transition-colors ${isActive ? "text-[#bbb]" : "text-[#888] group-hover:text-[#bbb]"}`}>
+        <span className="text-[11px] font-mono tracking-widest text-[#999]">IN THIS CODE</span>
+        <span className={`text-[11px] font-mono transition-colors ${isActive ? "text-[#bbb]" : "text-[#888] group-hover:text-[#bbb]"}`}>
           {isActive ? "↑ active" : "↗ jump"}
         </span>
       </div>
@@ -104,14 +104,16 @@ function ConceptCardItem({
       >
         <h4 className="text-sm font-semibold text-white leading-tight">{concept.title}</h4>
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[9px] font-mono tracking-wider px-1.5 py-0.5 rounded bg-[#222] text-[#999]">
+          <span className="text-[11px] font-mono tracking-wider px-1.5 py-0.5 rounded bg-[#222] text-[#999]">
             {concept.difficulty.toUpperCase()}
           </span>
           <a
             href={`https://www.google.com/search?q=${encodeURIComponent(concept.title + " examples")}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#555] hover:text-[#4A90D9] transition-colors"
+            className="text-[#888] transition-colors"
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-process)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "")}
             onClick={(e) => e.stopPropagation()}
             title={`Search "${concept.title} examples"`}
           >
@@ -120,7 +122,7 @@ function ConceptCardItem({
               <line x1="7.8" y1="7.8" x2="11" y2="11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
             </svg>
           </a>
-          <span className="text-[#555] text-[10px]">{expanded ? "▴" : "▾"}</span>
+          <span className="text-[#888] text-[12px]">{expanded ? "▴" : "▾"}</span>
         </div>
       </button>
 
@@ -129,7 +131,7 @@ function ConceptCardItem({
         <>
           {/* Principle */}
           <div className="px-3 pb-3">
-            <p className="text-[10px] font-mono tracking-widest text-[#999] mb-1">PRINCIPLE</p>
+            <p className="text-[12px] font-mono tracking-widest text-[#999] mb-1">PRINCIPLE</p>
             <p className="text-xs text-[#bbb] leading-relaxed">{concept.principle}</p>
           </div>
 
@@ -185,7 +187,7 @@ export default function ConceptsSidebar({
     <div className="shrink-0 flex">
       {/* Drag handle — always visible so it can be grabbed even when collapsed */}
       <div
-        className="w-1 shrink-0 cursor-col-resize bg-[#222] hover:bg-[#4A90D9]/50 transition-colors"
+        className="resize-handle"
         onMouseDown={onDragStart}
       />
 
@@ -232,7 +234,7 @@ export default function ConceptsSidebar({
                       <button
                         key={value}
                         onClick={() => setFilter(value)}
-                        className={`flex-1 text-[10px] font-mono tracking-wide py-1 rounded transition-colors ${
+                        className={`flex-1 text-[12px] font-mono tracking-wide py-1 rounded transition-colors ${
                           active ? "bg-[#222] text-[#eee]" : "text-[#888] hover:text-[#888]"
                         }`}
                       >

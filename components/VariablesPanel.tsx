@@ -83,7 +83,7 @@ export default function VariablesPanel({
     <div className="shrink-0 flex">
       {/* Drag handle */}
       <div
-        className="w-1 shrink-0 cursor-col-resize bg-[#222] hover:bg-[#4A90D9]/50 transition-colors"
+        className="resize-handle"
         onMouseDown={onDragStart}
       />
 
@@ -141,16 +141,16 @@ export default function VariablesPanel({
                       className="w-full flex items-center gap-2 pl-3 pr-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
                       onClick={() => onNodeSelect(isNodeSelected ? null : node.id)}
                     >
-                      <span className="text-[10px]" style={{ color: colorVar }}>
+                      <span className="text-[12px]" style={{ color: colorVar }}>
                         {config.icon}
                       </span>
                       <span
-                        className="text-[10px] font-mono tracking-wider truncate"
+                        className="text-[12px] font-mono tracking-wider truncate"
                         style={{ color: isNodeSelected ? colorVar : "#999" }}
                       >
                         {node.label.toUpperCase()}
                       </span>
-                      <span className="ml-auto shrink-0 text-[9px] font-mono text-[#555]">
+                      <span className="ml-auto shrink-0 text-[11px] font-mono text-[#555]">
                         {node.variables.length} {node.variables.length === 1 ? "variable" : "variables"}
                       </span>
                     </button>
@@ -193,13 +193,13 @@ export default function VariablesPanel({
                                 style={{ color: colorVar }}
                                 spellCheck={false}
                               />
-                              <span className="text-[10px] font-mono text-[#888] shrink-0">{v.type}</span>
+                              <span className="text-[12px] font-mono text-[#888] shrink-0">{v.type}</span>
                               {isDirty && (
-                                <span className="text-[9px] font-mono shrink-0" style={{ color: "var(--accent-process)" }}>edited</span>
+                                <span className="text-[11px] font-mono shrink-0" style={{ color: "var(--accent-process)" }}>edited</span>
                               )}
                               <button
                                 onClick={() => onShowInCode(node.id)}
-                                className="ml-auto shrink-0 text-[9px] font-mono text-[#888] transition-colors"
+                                className="ml-auto shrink-0 text-[11px] font-mono text-[#888] transition-colors"
                                 style={{ ["--hover-c" as string]: "var(--accent-process)" }}
                                 onMouseEnter={e => (e.currentTarget.style.color = "var(--accent-process)")}
                                 onMouseLeave={e => (e.currentTarget.style.color = "#888")}
@@ -211,7 +211,7 @@ export default function VariablesPanel({
 
                             {/* Editable value */}
                             <div className="flex items-center gap-1.5 px-3 pb-2">
-                              <span className="text-[10px] font-mono text-[#888] shrink-0">=</span>
+                              <span className="text-[12px] font-mono text-[#888] shrink-0">=</span>
                               <input
                                 value={currentEditValue}
                                 onChange={(e) =>
@@ -238,7 +238,7 @@ export default function VariablesPanel({
                             {/* Description */}
                             {v.description && (
                               <div className="border-t border-[#1a1a1a] px-3 py-2">
-                                <p className="text-[10px] text-[#999] leading-relaxed">{v.description}</p>
+                                <p className="text-[12px] text-[#999] leading-relaxed">{v.description}</p>
                               </div>
                             )}
                           </div>

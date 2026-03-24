@@ -88,10 +88,10 @@ export default function PaperPanel({
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header strip */}
       <div className="shrink-0 flex items-center justify-between px-4 py-1.5 border-b border-[#1a1a1a]">
-        <span className="text-[9px] font-mono text-[#555] tracking-wider">
+        <span className="text-[11px] font-mono text-[#555] tracking-wider">
           {paragraphs.length} PARAGRAPHS
         </span>
-        <span className="text-[9px] font-mono text-[#444] tracking-wider">ACADEMIC</span>
+        <span className="text-[11px] font-mono text-[#444] tracking-wider">ACADEMIC</span>
       </div>
 
       {/* Scrollable paragraph list */}
@@ -139,13 +139,13 @@ export default function PaperPanel({
               {isBlockStart && primaryNode && (
                 <div className="flex items-center gap-1.5 mb-2">
                   <span
-                    className="text-[10px]"
+                    className="text-[12px]"
                     style={{ color: nodeColor ?? undefined }}
                   >
                     {NODE_CONFIG[primaryNode.type].icon}
                   </span>
                   <span
-                    className="text-[9px] font-mono tracking-wider uppercase"
+                    className="text-[11px] font-mono tracking-wider uppercase"
                     style={{
                       color: nodeColor ?? undefined,
                       opacity: 0.85,
@@ -162,7 +162,7 @@ export default function PaperPanel({
               </p>
 
               {/* Paragraph number */}
-              <span className="absolute right-3 top-3 text-[9px] font-mono text-[#444] select-none">
+              <span className="absolute right-3 top-3 text-[11px] font-mono text-[#444] select-none">
                 ¶{para.number}
               </span>
             </div>
